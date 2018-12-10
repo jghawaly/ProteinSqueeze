@@ -141,17 +141,15 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'],
-                            '/Users/james/PycharmProjects/machine_learning/src/deep_learning/vgg16_data/cifar-10-batches-py/')
+    training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], '~/data/cifar-10-batches-py/')
 
-    testing_data = CIFAR10(['test_batch'],
-                           '/Users/james/PycharmProjects/machine_learning/src/deep_learning/vgg16_data/cifar-10-batches-py/')
+    testing_data = CIFAR10(['test_batch'], '~/data/cifar-10-batches-py/')
     myTP = TrainingParams()
     myTP.training_data = training_data  # input_data.read_data_sets("MNIST_data/", one_hot=True)
     myTP.testing_data = testing_data
     myTP.epochs = 25
     myTP.batch_size = 20
-    myTP.learning_rate = 1E-4
+    myTP.learning_rate = 0.0001
     myTP.dropout_rate = 0.01
     myTP.input_depth = 3
     myTP.input_width = 32#512
