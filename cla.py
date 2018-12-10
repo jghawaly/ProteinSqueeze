@@ -148,7 +148,7 @@ if __name__ == "__main__":
     myTP.training_data = training_data  # input_data.read_data_sets("MNIST_data/", one_hot=True)
     myTP.testing_data = testing_data
     myTP.epochs = 25
-    myTP.batch_size = 128
+    myTP.batch_size = 200
     myTP.learning_rate = 0.0001
     myTP.dropout_rate = 0.1
     myTP.input_depth = 3
