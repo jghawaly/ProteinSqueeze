@@ -28,6 +28,7 @@ class CIFAR10:
             training_data[k:k + batch_size]
             for k in range(0, self.length, batch_size)]
         """
+        self.batch_size = batch_size
         # shuffle our data
         p = np.random.permutation(self.length)
         shuffled_images = self.images[p]

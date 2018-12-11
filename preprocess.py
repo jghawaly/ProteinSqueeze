@@ -7,6 +7,7 @@ import utils as u
 training_data_directory = "D:/Data/all/train"
 testing_data_directory = "D:/Data/all/test"
 new_training_data_directory = "D:/Data/all/my_train"
+new_testing_data_directory = "D:/Data/all/my_test"
 training_results_path = "D:/Data/all/train.csv"
 
 training_results = u.read_training_output_file(training_results_path)
@@ -16,14 +17,14 @@ display_crops = False
 
 threshold = 25
 
-for filename in os.listdir(training_data_directory):
+for filename in os.listdir(testing_data_directory):
     if u.ColorFilters.green in filename:
         # grab the image of the nuclei
-        nuclei_img = cv2.imread("/".join((training_data_directory, filename)), cv2.IMREAD_GRAYSCALE).astype(np.uint8)
+        nuclei_img = cv2.imread("/".join((testing_data_directory, filename)), cv2.IMREAD_GRAYSCALE).astype(np.uint8)
         # the filename of the protein image
         protein_filename = "".join((filename.split("_")[0], "_", u.ColorFilters.green, ".", filename.split(".")[1]))
         # grab the image of the proteins
-        protein_img = cv2.imread("/".join((training_data_directory, protein_filename))).astype(np.uint8)
+        protein_img = cv2.imread("/".join((testing_data_directory, protein_filename))).astype(np.uint8)
         # check to make sure both images exist, OpenCV will return None if they don't
         if nuclei_img is None:
             raise FileNotFoundError
@@ -82,7 +83,7 @@ for filename in os.listdir(training_data_directory):
                 for c in contours:
                     new_cell = u.fill_image_in_contour(protein_img, c)
                     #cropped_cell = u.blackout_and_crop(protein_img, c)
-                    new_filename = "".join((new_training_data_directory, os.sep, u.get_base_filename(protein_filename), "_green", "_", str(i), ".png"))
+                    new_filename = "".join((new_testing_data_directory, os.sep, u.get_base_filename(protein_filename), "_green", "_", str(i), ".png"))
                     cv2.imwrite(new_filename, new_cell)
                     if display_crops:
                         print(u.int_labels_to_text(
