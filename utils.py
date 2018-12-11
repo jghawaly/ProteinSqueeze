@@ -96,6 +96,7 @@ def int_labels_to_text(l):
     """
     return [labels[a] for a in l]
 
+
 def fill_image_in_contour(img, contour):
     """
     Create an image that only contains pixels within the contour regions
@@ -110,6 +111,7 @@ def fill_image_in_contour(img, contour):
     # blackout all pixels in the original image OUTSIDE of the filled contour
     filled_img = cv2.bitwise_and(img.copy(), contour_fill)
     return filled_img
+
 
 def blackout_and_crop(img, contour):
     """

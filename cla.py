@@ -5,7 +5,8 @@ from cifar10_loader import CIFAR10
 
 
 class AtlasClassifier:
-    def __init__(self, tp: TrainingParams):
+    def __init__(self, sess: tf.Session, tp: TrainingParams):
+        self.sess = sess
         self.tp = tp
         self.initial_weight_std = 0.1
         self.incep1_stride = 2
@@ -63,20 +64,22 @@ class AtlasClassifier:
                                        activation=tf.nn.relu,
                                        name='conv10')
         self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=20, strides=(1, 1), name='avgpool10')
-        # self.out = tf.nn.sigmoid(self.avgpool10, name='out')
 
-        # self.logits = tf.squeeze(self.avgpool10, axis=[1, 2])
+        self.avgpool10 = tf.nn.sigmoid(self.avgpool10, name='out')
+
         self.logits = tf.layers.flatten(inputs=self.avgpool10, name='logits')
 
     def train(self):
         # contains the desired outputs
-        desired_outputs = tf.placeholder(dtype=tf.int32, shape=self.logits.shape, name='desired_outputs')
+        desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
         # the predicted labels
         logits = tf.reshape(tf.cast(tf.argmax(self.logits, 1), tf.int32), [-1, 1])
         # the actual labels
         labels = tf.reshape(tf.cast(tf.argmax(desired_outputs, 1), tf.int32), [-1, 1])
         # loss function for single label
         loss_function = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self.logits))
+        # loss_function = tf.reduce_mean(
+        #     tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits)))
         # Adam Optimizer
         optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
         # Single-label accuracy measure
@@ -85,86 +88,87 @@ class AtlasClassifier:
         # this will store losses during training
         losses = []
         # train
-        with tf.Session() as sess:
-            # Initialize all variables
-            sess.run(tf.global_variables_initializer())
+        # with tf.Session() as sess:
+        # Initialize all variables
+        self.sess.run(tf.global_variables_initializer())
 
-            # Loop over number of epochs
-            for epoch in range(self.tp.epochs):
-                print('Running Epoch %g' % epoch)
+        # Loop over number of epochs
+        for epoch in range(self.tp.epochs):
+            print('Running Epoch %g' % epoch)
 
-                # RESET OUR BATCHES
-                self.tp.training_data.shuffle_and_batch(self.tp.batch_size)
-                self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
+            # shuffle batches
+            self.tp.training_data.shuffle_and_batch(self.tp.batch_size)
+            self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
 
-                # batches per epoch for the training data
-                bpe_training = np.floor(self.tp.training_data.length / self.tp.batch_size).astype(np.int16)
+            # batches per epoch for the training data
+            bpe_training = np.floor(self.tp.training_data.length / self.tp.batch_size).astype(np.int16)
 
-                x = 1
-                while x < bpe_training:
-                    # Get a batch of images and labels
-                    batch_xs, batch_ys, batch_strings = self.tp.training_data.get_next_batch()
-                    # batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
-                    batch_ys = np.squeeze(batch_ys)
-                    # And run the training op
-                    _, logits = sess.run([optimizer, self.logits], feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
+            x = 1
+            while x < bpe_training:
+                # Get a batch of images and labels
+                batch_xs, batch_ys, batch_strings = self.tp.training_data.get_next_batch()
+                # batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
+                batch_ys = np.squeeze(batch_ys)
+                # And run the training op
+                _, logits = self.sess.run([optimizer, self.logits],
+                                          feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
                                                      self.dropout_rate: self.tp.dropout_rate})
-                    # print(logits[-1])
-                    # print(batch_ys[-1])
-                    # print("stop")
-                    x += 1
+                x += 1
 
-                # batches per epoch for the testing data
-                bpe_testing = np.floor(self.tp.testing_data.length / self.tp.batch_size).astype(np.int16)
-                x = 1
-                loss = 0
-                accs = []
-                while x < bpe_testing:
-                    # Get a batch of images and labels
-                    batch_xs, batch_ys, batch_strings = self.tp.testing_data.get_next_batch()
-                    # batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
-                    batch_ys = np.squeeze(batch_ys)
-                    # And run the training op
-                    loss, acc = sess.run([loss_function, accuracy],
-                                            feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
-                                                       self.dropout_rate: self.tp.dropout_rate})
+            # batches per epoch for the testing data
+            bpe_testing = np.floor(self.tp.testing_data.length / self.tp.batch_size).astype(np.int16)
+            x = 1
+            loss = 0
+            accs = []
+            while x < bpe_testing:
+                # Get a batch of images and labels
+                batch_xs, batch_ys, batch_strings = self.tp.testing_data.get_next_batch()
+                # batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
+                batch_ys = np.squeeze(batch_ys)
+                # And run the training op
+                loss, acc = self.sess.run([loss_function, accuracy],
+                                          feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
+                                                     self.dropout_rate: self.tp.dropout_rate})
 
-                    x += 1
-                    accs.append(acc)
-                print("Accuracy: %g"%(100 * np.average(np.array(accs))))
-                losses.append(loss)
+                x += 1
+                accs.append(acc)
+            print("Accuracy: %g" % (100 * np.average(np.array(accs))))
+            losses.append(loss)
 
-            # self.training_data.shuffle_and_batch(self.batch_size)
-            # batch_xs, batch_ys, batch_strings = self.training_data.get_next_batch()
-            # out = sess.run(self.output, feed_dict={self.corrupted_input: batch_xs})
-            # plt.imshow(batch_xs[0])
-            # plt.show()
-            # plt.imshow(out[0])
-            # plt.show()
-            #
-            # plt.plot(losses)
-            # plt.xlabel("Epochs")
-            # plt.ylabel("Loss")
-            # plt.title("Loss Convergence")
-            # plt.show()
+    def save(self, path):
+        # this is so that we can save the network
+        saver = tf.train.Saver()
+        # save the model
+        return saver.save(self.sess, path)
+
+    def save_new(self, path, saver):
+        saver.save(self.sess, path)
+
+    def load(self, path):
+        # this is so that we can reload the network
+        saver = tf.train.Saver()
+        # Restore the model
+        saver.restore(self.sess, path)
+        print("Model loaded.")
 
 
 if __name__ == "__main__":
-    path = "C:/Users/james/PycharmProjects/machine_learning/src/deep_learning/vgg16_data/cifar-10-batches-py/"
-    training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], path)
-    testing_data = CIFAR10(['test_batch'], path)
+    with tf.Session() as sess:
+        path = "C:/Users/james/PycharmProjects/machine_learning/src/deep_learning/vgg16_data/cifar-10-batches-py/"
+        training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], path)
+        testing_data = CIFAR10(['test_batch'], path)
 
-    myTP = TrainingParams()
-    myTP.training_data = training_data  # input_data.read_data_sets("MNIST_data/", one_hot=True)
-    myTP.testing_data = testing_data
-    myTP.epochs = 25
-    myTP.batch_size = 100
-    myTP.learning_rate = 0.0001
-    myTP.dropout_rate = 0.1
-    myTP.input_depth = 3
-    myTP.input_width = 32
-    myTP.input_height = 32
-    myTP.num_classes = 10
+        myTP = TrainingParams()
+        myTP.training_data = training_data  # input_data.read_data_sets("MNIST_data/", one_hot=True)
+        myTP.testing_data = testing_data
+        myTP.epochs = 25
+        myTP.batch_size = 100
+        myTP.learning_rate = 0.0001
+        myTP.dropout_rate = 0.1
+        myTP.input_depth = 3
+        myTP.input_width = 32
+        myTP.input_height = 32
+        myTP.num_classes = 10
 
-    myModel = AtlasClassifier(myTP)
-    myModel.train()
+        myModel = AtlasClassifier(sess, myTP)
+        myModel.train()
