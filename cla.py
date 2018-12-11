@@ -65,16 +65,27 @@ class AtlasClassifier:
                                        activation=tf.nn.relu,
                                        name='conv10')
         self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=12, strides=(1, 1), name='avgpool10')
-        self.out = tf.nn.sigmoid(self.avgpool10, name='out')
+        # self.out = tf.nn.sigmoid(self.avgpool10, name='out')
+
+        self.logits = tf.squeeze(self.avgpool10, axis=[1, 2])
+        print(tf.shape(self.logits))
+
+
 
     def train(self):
-        desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.out.shape, name='desired_outputs')
-        # define loss
-        loss_function = tf.reduce_mean(tf.square(self.out - desired_outputs) + tf.losses.get_regularization_loss())
-        # define optimizer
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.tp.learning_rate).minimize(loss_function)
-        correct_pred = tf.equal(tf.argmax(self.out, 3), tf.argmax(desired_outputs, 3))
-        accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+        desired_outputs = tf.placeholder(dtype=tf.int32, shape=self.logits.shape, name='desired_outputs')
+        # # define loss
+        # loss_function = tf.reduce_mean(tf.square(self.out - desired_outputs) + tf.losses.get_regularization_loss())
+        # # define optimizer
+        # optimizer = tf.train.AdamOptimizer(learning_rate=self.tp.learning_rate).minimize(loss_function)
+        # correct_pred = tf.equal(tf.argmax(self.out, 3), tf.argmax(desired_outputs, 3))
+        # accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
+
+        loss_function = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits))
+        optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
+        predictions = tf.reshape(tf.argmax(tf.nn.softmax(self.logits), axis=1, output_type=tf.int32), [-1, 1])
+        accuracy = tf.reduce_mean(tf.cast(tf.equal(predictions, desired_outputs), dtype=tf.float32))
+
         # for tracking the loss throughout the training process
         losses = []
 
@@ -98,7 +109,8 @@ class AtlasClassifier:
                 while x < bpe_training:
                     # Get a batch of images and labels
                     batch_xs, batch_ys, batch_strings = self.tp.training_data.get_next_batch()
-                    batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
+                    # batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
+                    batch_ys = np.squeeze(batch_ys)
                     # And run the training op
                     sess.run([optimizer], feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
                                                      self.dropout_rate: self.tp.dropout_rate})
@@ -113,8 +125,8 @@ class AtlasClassifier:
                 while x < bpe_testing:
                     # Get a batch of images and labels
                     batch_xs, batch_ys, batch_strings = self.tp.testing_data.get_next_batch()
-                    batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
-
+                    # batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
+                    batch_ys = np.squeeze(batch_ys)
                     # And run the training op
                     loss, acc = sess.run([loss_function, accuracy],
                                             feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
@@ -141,9 +153,9 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], '~/data/cifar-10-batches-py/')
-
-    testing_data = CIFAR10(['test_batch'], '~/data/cifar-10-batches-py/')
+    path = "C:/Users/james/PycharmProjects/machine_learning/src/deep_learning/vgg16_data/cifar-10-batches-py/"
+    training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], path)
+    testing_data = CIFAR10(['test_batch'], path)
     myTP = TrainingParams()
     myTP.training_data = training_data  # input_data.read_data_sets("MNIST_data/", one_hot=True)
     myTP.testing_data = testing_data
