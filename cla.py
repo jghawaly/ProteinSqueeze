@@ -157,10 +157,6 @@ if __name__ == "__main__":
     training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], path)
     testing_data = CIFAR10(['test_batch'], path)
 
-    training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], '/home/james/data/cifar-10-batches-py/')
-
-    testing_data = CIFAR10(['test_batch'], '/home/james/data/cifar-10-batches-py/')
-
     myTP = TrainingParams()
     myTP.training_data = training_data  # input_data.read_data_sets("MNIST_data/", one_hot=True)
     myTP.testing_data = testing_data
