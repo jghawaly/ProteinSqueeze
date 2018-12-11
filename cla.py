@@ -1,8 +1,6 @@
 import tensorflow as tf
 import numpy as np
 from utils import TrainingParams
-import utils
-from tensorflow.examples.tutorials.mnist import input_data
 from cifar10_loader import CIFAR10
 
 
@@ -45,50 +43,47 @@ class AtlasClassifier:
         self.dropout_rate = tf.placeholder(dtype=tf.float32)
         self.images = tf.placeholder(tf.float32, shape=[self.tp.batch_size, self.tp.input_width, self.tp.input_height,
                                                         self.tp.input_depth])
-        self.images_resized = tf.image.resize_images(images=self.images, size=[224, 224])
-        self.conv1 = tf.layers.conv2d(inputs=self.images_resized, filters=96, kernel_size=7, strides=(2, 2),
+        # self.images_resized = tf.image.resize_images(images=self.images, size=[224, 224])
+        self.conv1 = tf.layers.conv2d(inputs=self.images, filters=96, kernel_size=7, strides=(1, 1),
                                       activation=tf.nn.relu,
                                       name="conv1")
-        self.mpool1 = tf.layers.max_pooling2d(inputs=self.conv1, pool_size=3, strides=(2, 2), name='mpool1')
+        self.mpool1 = tf.layers.max_pooling2d(inputs=self.conv1, pool_size=3, strides=(1, 1), name='mpool1')
         self.fire2 = self.fire_module(self.mpool1, 16, 64, 64, "fire2")
         self.fire3 = self.fire_module(self.fire2, 16, 64, 64, "fire3")
         self.fire4 = self.fire_module(self.fire3, 32, 128, 128, "fire4")
-        self.mpool4 = tf.layers.max_pooling2d(inputs=self.fire4, pool_size=3, strides=(2, 2), name="mpool4")
+        self.mpool4 = tf.layers.max_pooling2d(inputs=self.fire4, pool_size=3, strides=(1, 1), name="mpool4")
         self.fire5 = self.fire_module(self.mpool4, 32, 128, 128, "fire5")
         self.fire6 = self.fire_module(self.fire5, 48, 192, 192, "fire6")
         self.fire7 = self.fire_module(self.fire6, 48, 192, 192, "fire7")
         self.fire8 = self.fire_module(self.fire7, 64, 256, 256, "fire8")
-        self.mpool8 = tf.layers.max_pooling2d(inputs=self.fire8, pool_size=3, strides=(2, 2), name='mpool8')
+        self.mpool8 = tf.layers.max_pooling2d(inputs=self.fire8, pool_size=3, strides=(1, 1), name='mpool8')
         self.fire9 = self.fire_module(self.mpool8, 32, 128, 128, "fire9")
         self.dropout9 = tf.layers.dropout(inputs=self.fire9, rate=self.tp.dropout_rate, name='dropout9')
         self.conv10 = tf.layers.conv2d(inputs=self.dropout9, filters=self.tp.num_classes, kernel_size=1, strides=(1, 1),
                                        activation=tf.nn.relu,
                                        name='conv10')
-        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=12, strides=(1, 1), name='avgpool10')
+        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=20, strides=(1, 1), name='avgpool10')
         # self.out = tf.nn.sigmoid(self.avgpool10, name='out')
 
-        self.logits = tf.squeeze(self.avgpool10, axis=[1, 2])
-        print(tf.shape(self.logits))
-
-
+        # self.logits = tf.squeeze(self.avgpool10, axis=[1, 2])
+        self.logits = tf.layers.flatten(inputs=self.avgpool10, name='logits')
 
     def train(self):
+        # contains the desired outputs
         desired_outputs = tf.placeholder(dtype=tf.int32, shape=self.logits.shape, name='desired_outputs')
-        # # define loss
-        # loss_function = tf.reduce_mean(tf.square(self.out - desired_outputs) + tf.losses.get_regularization_loss())
-        # # define optimizer
-        # optimizer = tf.train.AdamOptimizer(learning_rate=self.tp.learning_rate).minimize(loss_function)
-        # correct_pred = tf.equal(tf.argmax(self.out, 3), tf.argmax(desired_outputs, 3))
-        # accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-
-        loss_function = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits))
+        # the predicted labels
+        logits = tf.reshape(tf.cast(tf.argmax(self.logits, 1), tf.int32), [-1, 1])
+        # the actual labels
+        labels = tf.reshape(tf.cast(tf.argmax(desired_outputs, 1), tf.int32), [-1, 1])
+        # loss function for single label
+        loss_function = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self.logits))
+        # Adam Optimizer
         optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
-        predictions = tf.reshape(tf.argmax(tf.nn.softmax(self.logits), axis=1, output_type=tf.int32), [-1, 1])
-        accuracy = tf.reduce_mean(tf.cast(tf.equal(predictions, desired_outputs), dtype=tf.float32))
+        # Single-label accuracy measure
+        accuracy = tf.reduce_mean(tf.cast(tf.equal(logits, labels), dtype=tf.float32))
 
-        # for tracking the loss throughout the training process
+        # this will store losses during training
         losses = []
-
         # train
         with tf.Session() as sess:
             # Initialize all variables
@@ -112,9 +107,11 @@ class AtlasClassifier:
                     # batch_ys = np.resize(batch_ys, [batch_ys.shape[0], 1, 1, batch_ys.shape[1]])
                     batch_ys = np.squeeze(batch_ys)
                     # And run the training op
-                    sess.run([optimizer], feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
+                    _, logits = sess.run([optimizer, self.logits], feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
                                                      self.dropout_rate: self.tp.dropout_rate})
-
+                    # print(logits[-1])
+                    # print(batch_ys[-1])
+                    # print("stop")
                     x += 1
 
                 # batches per epoch for the testing data
@@ -161,12 +158,12 @@ if __name__ == "__main__":
     myTP.training_data = training_data  # input_data.read_data_sets("MNIST_data/", one_hot=True)
     myTP.testing_data = testing_data
     myTP.epochs = 25
-    myTP.batch_size = 200
+    myTP.batch_size = 100
     myTP.learning_rate = 0.0001
     myTP.dropout_rate = 0.1
     myTP.input_depth = 3
-    myTP.input_width = 32#512
-    myTP.input_height = 32#512
+    myTP.input_width = 32
+    myTP.input_height = 32
     myTP.num_classes = 10
 
     myModel = AtlasClassifier(myTP)
