@@ -1,8 +1,9 @@
 import tensorflow as tf
 import numpy as np
-from utils import TrainingParams, labels
+from utils import TrainingParams, labels, open_image
 from cifar10_loader import CIFAR10
 from atlas_loader import AtlasLoader
+import os
 
 
 class AtlasClassifier:
@@ -170,6 +171,24 @@ class AtlasClassifier:
             losses.append(loss)
         return losses
 
+    def evaluate(self, inputs):
+        if self.input_data_type == 'atlas':
+            return self.sess.run([self.logits], feed_dict={self.images: inputs, self.dropout_rate: 0.0})
+        elif self.input_data_type == 'cifar10':
+            print("Not Yet Implemented")
+            return None
+        else:
+            raise ValueError("Bad input type, must be atlas or cifar10")
+
+    def evaluate_directory(self, path, threshold):
+        results = {}
+        for filename in os.listdir(path):
+            img = open_image("/".join((path, filename)))
+            inference = self.evaluate([img])
+            results[filename] = np.sort(inference[np.where(inference >= threshold)])
+
+        return results
+
     def save(self, path):
         # this is so that we can save the network
         saver = tf.train.Saver()
@@ -188,7 +207,7 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = False
+    train_cifar10 = True
 
     if train_cifar10:
         with tf.Session() as sess:
@@ -202,7 +221,7 @@ if __name__ == "__main__":
             myTP.testing_data = testing_data
             myTP.epochs = 25
             myTP.batch_size = 100
-            myTP.learning_rate = 0.0001
+            myTP.learning_rate = 0.0005
             myTP.dropout_rate = 0.05
             myTP.input_depth = 3
             myTP.input_width = 32
@@ -222,7 +241,7 @@ if __name__ == "__main__":
             myTP.testing_data = testing_data
             myTP.epochs = 25
             myTP.batch_size = 32
-            myTP.learning_rate = 0.00005
+            myTP.learning_rate = 0.0001
             myTP.dropout_rate = 0.05
             myTP.input_depth = 1
             myTP.input_width = 512

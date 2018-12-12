@@ -127,6 +127,10 @@ def blackout_and_crop(img, contour):
     return blackout_img[y:y + h, x:x + w]
 
 
+def open_image(path):
+    return cv2.imread(path, cv2.IMREAD_GRAYSCALE).astype(np.uint8)
+
+
 if __name__ == '__main__':
     training_results_path = "D:/Data/all/train.csv"
     data = read_training_output_file(training_results_path)

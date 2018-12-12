@@ -35,7 +35,7 @@ class AtlasLoader:
         my_label_strings = []
         for filename in filenames:
             if self.color_to_load in filename:
-                img = cv2.imread("/".join((self.files_dir, filename)), cv2.IMREAD_GRAYSCALE).astype(np.uint8)
+                img = utils.open_image("/".join((self.files_dir, filename)))
                 base_fname = utils.get_base_filename(filename)
                 if self.one_hot_labels:
                     lbls = self.one_hot(utils.get_filename_labels(label_data, base_fname), len(utils.labels))
@@ -67,9 +67,6 @@ class AtlasLoader:
         return outputs
 
     def get_next_batch(self):
-        # next_img_batch = self.image_batch[self.batch_iteration]
-        # next_label_batch = self.label_batch[self.batch_iteration]
-        # next_string_batch = self.string_batch[self.batch_iteration]
         next_img_batch = np.reshape(self.images[self.shuffled_indices[self.batch_iteration]], [self.batch_size, 512, 512, 1])
         next_label_batch = self.label_indices[self.shuffled_indices[self.batch_iteration]]
         next_string_batch = self.label_strings[self.shuffled_indices[self.batch_iteration]]
