@@ -111,8 +111,10 @@ class AtlasClassifier:
         # Adam Optimizer
         optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
         # accuracy measure
-        accuracy = tf.reduce_mean(tf.cast(tf.equal(self.logits, desired_outputs), dtype=tf.float32))
-
+        # accuracy = tf.reduce_mean(tf.cast(tf.equal(self.logits, desired_outputs), dtype=tf.float32))
+        # accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.round(self.logits)), tf.round(desired_outputs), tf.float32))
+        correction = tf.equal(tf.round(self.logits), tf.round(desired_outputs))
+        accuracy = tf.reduce_mean(tf.cast(correction, tf.float32))
         # this will store losses during training
         losses = []
 
