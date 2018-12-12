@@ -127,7 +127,7 @@ class AtlasClassifier:
             self.tp.training_data.shuffle_and_batch(self.tp.batch_size)
 
             # batches per epoch for the training data
-            bpe_training = np.floor(self.tp.training_data.length / self.tp.batch_size).astype(np.int16) 
+            bpe_training = np.floor(self.tp.training_data.length / self.tp.batch_size).astype(np.int16)
 
             x = 0
             while x < bpe_training:
@@ -160,6 +160,7 @@ class AtlasClassifier:
                 accs.append(acc)
             print("Accuracy: %g" % (100.0 * np.average(np.array(accs))))
             losses.append(loss)
+        return losses
 
     def save(self, path):
         # this is so that we can save the network
@@ -222,4 +223,6 @@ if __name__ == "__main__":
             myTP.num_classes = len(labels)
 
             myModel = AtlasClassifier(sess, myTP)
-            myModel.train()
+            losses = myModel.train()
+            myModel.save("myNetwork.ckpt")
+            np.save("losses.npy", losses)
