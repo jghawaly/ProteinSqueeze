@@ -37,7 +37,7 @@ class AtlasClassifier:
             ps = 15
         elif self.input_data_type == 'cifar10':
             st = 1
-            ps = 20
+            ps = 10
         else:
             raise ValueError("Bad input type, must be atlas or cifar10")
 
@@ -60,10 +60,10 @@ class AtlasClassifier:
         self.mpool8 = tf.layers.max_pooling2d(inputs=self.fire8, pool_size=3, strides=(st, st), name='mpool8')
         self.fire9 = self.fire_module(self.mpool8, 32, 128, 128, "fire9")
         self.dropout9 = tf.layers.dropout(inputs=self.fire9, rate=self.tp.dropout_rate, name='dropout9')
-        self.conv10 = tf.layers.conv2d(inputs=self.dropout9, filters=self.tp.num_classes, kernel_size=1, strides=(1, 1),
+        self.conv10 = tf.layers.conv2d(inputs=self.dropout9, filters=self.tp.num_classes, kernel_size=1, strides=(2, 2),
                                        activation=tf.nn.relu,
                                        name='conv10')
-        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=ps, strides=(st, st), name='avgpool10')
+        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=ps, strides=(1, 1), name='avgpool10')
 
         if self.input_data_type == 'atlas':
             self.activated = tf.nn.sigmoid(self.avgpool10, name='outs')
@@ -188,7 +188,7 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = True
+    train_cifar10 = False
 
     if train_cifar10:
         with tf.Session() as sess:
