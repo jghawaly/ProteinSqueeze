@@ -70,32 +70,12 @@ class AtlasLoader:
         # next_img_batch = self.image_batch[self.batch_iteration]
         # next_label_batch = self.label_batch[self.batch_iteration]
         # next_string_batch = self.string_batch[self.batch_iteration]
-
+        print(len(self.shuffled_indices))
+        exit()
         next_img_batch = np.reshape(self.images[self.shuffled_indices[self.batch_iteration]], [self.batch_size, 512, 512, 1])
         next_label_batch = self.label_indices[self.shuffled_indices[self.batch_iteration]]
         next_string_batch = self.label_strings[self.shuffled_indices[self.batch_iteration]]
         self.batch_iteration += 1
 
         return next_img_batch, next_label_batch, next_string_batch
-
-
-if __name__ == "__main__":
-    path = "D:/Data/all/train"
-    #
-    # import shutil
-    # new_path = "D:/Data/all/train_small"
-    # i = 0
-    # for filename in os.listdir(path):
-    #     shutil.copy("/".join((path, filename)), "/".join((new_path, filename)))
-    #     i += 1
-    #     if i == 32768:
-    #         break
-    training_data = AtlasLoader(path, keys_file="D:/Data/all/train.csv")
-    print(training_data.length)
-    print("Shuffling...")
-    training_data.shuffle_and_batch(32)
-    print("Done Shuffling.")
-    print("Loading next batch...")
-    batch, labels, strings = training_data.get_next_batch()
-    print("Done loading next batch.")
 

@@ -127,11 +127,6 @@ def blackout_and_crop(img, contour):
     return blackout_img[y:y + h, x:x + w]
 
 
-def format_and_resize(img, size):
-    rows = img.shape[0]
-    cols = img.shape[1]
-
-
 if __name__ == '__main__':
     training_results_path = "D:/Data/all/train.csv"
     data = read_training_output_file(training_results_path)

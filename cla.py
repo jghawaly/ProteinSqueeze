@@ -125,7 +125,6 @@ class AtlasClassifier:
 
             # shuffle batches
             self.tp.training_data.shuffle_and_batch(self.tp.batch_size)
-            # self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
 
             # batches per epoch for the training data
             bpe_training = np.floor(self.tp.training_data.length / self.tp.batch_size).astype(np.int16) 
@@ -140,7 +139,9 @@ class AtlasClassifier:
                                           feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
                                                      self.dropout_rate: self.tp.dropout_rate})
                 x += 1
+
             self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
+
             # batches per epoch for the testing data
             bpe_testing = np.floor(self.tp.testing_data.length / self.tp.batch_size).astype(np.int16)
             x = 0
