@@ -188,7 +188,7 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = False
+    train_cifar10 = True
 
     if train_cifar10:
         with tf.Session() as sess:
