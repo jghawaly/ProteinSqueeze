@@ -126,7 +126,7 @@ class AtlasClassifier:
             # Adam Optimizer
             optimizer = tf.train.AdamOptimizer(lr)
             # how correct network is
-            correctness = tf.equal(tf.round(tf.nn.sigmoid(self.logits)), tf.round(desired_outputs))
+            correctness = tf.equal(tf.round(self.logits), tf.round(desired_outputs))
             # accuracy measure
             accuracy = tf.reduce_mean(tf.cast(correctness, tf.float32))
         else:
@@ -158,7 +158,7 @@ class AtlasClassifier:
                 batch_xs, batch_ys, batch_strings = self.tp.training_data.get_next_batch()
                 batch_ys = np.squeeze(batch_ys)
                 # calculate annealed learning rate
-                annealed_lr = self.tp.learning_rate / np.sqrt(epoch) if epoch != 0 else self.tp.learning_rate
+                annealed_lr = self.tp.learning_rate / np.sqrt(float(epoch)) if epoch != 0 else self.tp.learning_rate
                 # And run the training op
                 _, logits = self.sess.run([train_op, self.logits],
                                           feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
@@ -225,7 +225,7 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = True
+    train_cifar10 = False
 
     if train_cifar10:
         with tf.Session() as sess:
