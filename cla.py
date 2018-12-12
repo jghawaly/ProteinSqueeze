@@ -122,7 +122,7 @@ class AtlasClassifier:
             desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
             # loss function for multi label
             loss_function = tf.reduce_mean(tf.reduce_sum(
-                tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits)))
+                tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits), axis=1))
             # Adam Optimizer
             optimizer = tf.train.AdamOptimizer(lr)
             # how correct network is
@@ -202,8 +202,8 @@ class AtlasClassifier:
         for filename in os.listdir(path):
             if string_filter in filename:
                 img = open_image("/".join((path, filename)))
-                inference = self.evaluate([img])
-                results[filename] = np.sort(inference[np.where(inference >= threshold)])
+                inference = self.evaluate([img])[0]
+                results[filename.split("_")[0]] = np.sort(np.where(inference > threshold)[1])
 
         return results
 
@@ -225,7 +225,7 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = False
+    train_cifar10 = True
 
     if train_cifar10:
         with tf.Session() as sess:

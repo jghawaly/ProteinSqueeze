@@ -128,7 +128,7 @@ def blackout_and_crop(img, contour):
 
 
 def open_image(path):
-    return cv2.imread(path, cv2.IMREAD_GRAYSCALE).astype(np.uint8)
+    return np.reshape(cv2.imread(path, cv2.IMREAD_GRAYSCALE).astype(np.uint8), (512, 512, 1))
 
 
 if __name__ == '__main__':
