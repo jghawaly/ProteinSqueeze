@@ -103,6 +103,7 @@ class AtlasClassifier:
         print(self.logits.shape)
 
     def train(self):
+        lr = tf.placeholder(dtype=tf.float32, name='learning_rate')
         if self.input_data_type == 'cifar10':
             # contains the desired outputs
             desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
@@ -113,7 +114,7 @@ class AtlasClassifier:
             # loss function for single label
             loss_function = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self.logits))
             # Adam Optimizer
-            optimizer = tf.train.AdamOptimizer(self.tp.learning_rate)
+            optimizer = tf.train.AdamOptimizer(lr)
             # accuracy measure
             accuracy = tf.reduce_mean(tf.cast(tf.equal(logits, labels), dtype=tf.float32))
         elif self.input_data_type == 'atlas':
@@ -123,7 +124,7 @@ class AtlasClassifier:
             loss_function = tf.reduce_mean(tf.reduce_sum(
                 tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits)))
             # Adam Optimizer
-            optimizer = tf.train.AdamOptimizer(self.tp.learning_rate)
+            optimizer = tf.train.AdamOptimizer(lr)
             # how correct network is
             correctness = tf.equal(tf.round(tf.nn.sigmoid(self.logits)), tf.round(desired_outputs))
             # accuracy measure
@@ -156,10 +157,13 @@ class AtlasClassifier:
                 # Get a batch of images and labels
                 batch_xs, batch_ys, batch_strings = self.tp.training_data.get_next_batch()
                 batch_ys = np.squeeze(batch_ys)
+                # calculate annealed learning rate
+                annealed_lr = self.tp.learning_rate / np.sqrt(epoch) if epoch != 0 else self.tp.learning_rate
                 # And run the training op
                 _, logits = self.sess.run([train_op, self.logits],
                                           feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
-                                                     self.dropout_rate: self.tp.dropout_rate})
+                                                     self.dropout_rate: self.tp.dropout_rate,
+                                                     lr: annealed_lr})
                 x += 1
 
             self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
@@ -193,12 +197,13 @@ class AtlasClassifier:
         else:
             raise ValueError("Bad input type, must be atlas or cifar10")
 
-    def evaluate_directory(self, path, threshold):
+    def evaluate_directory(self, path, threshold, string_filter=""):
         results = {}
         for filename in os.listdir(path):
-            img = open_image("/".join((path, filename)))
-            inference = self.evaluate([img])
-            results[filename] = np.sort(inference[np.where(inference >= threshold)])
+            if string_filter in filename:
+                img = open_image("/".join((path, filename)))
+                inference = self.evaluate([img])
+                results[filename] = np.sort(inference[np.where(inference >= threshold)])
 
         return results
 
@@ -242,7 +247,8 @@ if __name__ == "__main__":
             myTP.num_classes = 10
 
             myModel = AtlasClassifier(sess, myTP, input_data_type='cifar10')
-            myModel.train()
+            losses = myModel.train()
+            np.save("losses_adapt.npy", losses)
     else:
         with tf.Session() as sess:
             path = "../data/train"
@@ -263,5 +269,5 @@ if __name__ == "__main__":
 
             myModel = AtlasClassifier(sess, myTP, input_data_type='atlas')
             losses = myModel.train()
-            myModel.save("/networks/myCifarModel.ckpt")
-            np.save("losses.npy", losses)
+            myModel.save("/networks/myCifarModel_adapt.ckpt")
+            np.save("losses_adapt.npy", losses)
