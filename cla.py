@@ -125,10 +125,10 @@ class AtlasClassifier:
 
             # shuffle batches
             self.tp.training_data.shuffle_and_batch(self.tp.batch_size)
-            self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
+            # self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
 
             # batches per epoch for the training data
-            bpe_training = np.floor(self.tp.training_data.length / self.tp.batch_size).astype(np.int16) - 1
+            bpe_training = np.floor(self.tp.training_data.length / self.tp.batch_size).astype(np.int16) 
 
             x = 0
             while x < bpe_training:
@@ -140,9 +140,9 @@ class AtlasClassifier:
                                           feed_dict={self.images: batch_xs, desired_outputs: batch_ys,
                                                      self.dropout_rate: self.tp.dropout_rate})
                 x += 1
-
+            self.tp.testing_data.shuffle_and_batch(self.tp.batch_size)
             # batches per epoch for the testing data
-            bpe_testing = np.floor(self.tp.testing_data.length / self.tp.batch_size).astype(np.int16) - 1
+            bpe_testing = np.floor(self.tp.testing_data.length / self.tp.batch_size).astype(np.int16)
             x = 0
             loss = 0
             accs = []
@@ -202,15 +202,17 @@ if __name__ == "__main__":
             myModel.train()
     else:
         with tf.Session() as sess:
-            path = "D:/Data/all/train"
-            training_data = AtlasLoader(path, keys_file="D:/Data/all/train.csv")
+            # path = "D:/Data/all/train"
+            path = "../data/train"
+            # training_data = AtlasLoader(path, keys_file="D:/Data/all/train.csv")
+            training_data = AtlasLoader(path, keys_file="../data/train.csv")
             testing_data = training_data
 
             myTP = TrainingParams()
             myTP.training_data = training_data
             myTP.testing_data = testing_data
             myTP.epochs = 25
-            myTP.batch_size = 8
+            myTP.batch_size = 32
             myTP.learning_rate = 0.0001
             myTP.dropout_rate = 0.1
             myTP.input_depth = 1
