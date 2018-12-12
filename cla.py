@@ -50,7 +50,7 @@ class AtlasClassifier:
                                                         self.tp.input_depth])
 
         if self.input_data_type == 'atlas':
-            self.inputs = tf.cast(self.images/255, tf.float32)
+            self.inputs = tf.cast(self.images, tf.float32) / 255.0
         else:
             self.inputs = self.images
 
@@ -262,7 +262,7 @@ if __name__ == "__main__":
             myTP.batch_size = 32
             myTP.learning_rate = 0.001
             myTP.dropout_rate = 0.05
-            myTP.input_depth = 1
+            myTP.input_depth = 4
             myTP.input_width = 512
             myTP.input_height = 512
             myTP.num_classes = len(labels)

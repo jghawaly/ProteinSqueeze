@@ -34,17 +34,26 @@ class AtlasLoader:
         my_label_indices = []
         my_label_strings = []
         for filename in filenames:
-            if self.color_to_load in filename:
-                img = utils.open_image("/".join((self.files_dir, filename)))
-                base_fname = utils.get_base_filename(filename)
-                if self.one_hot_labels:
-                    lbls = self.one_hot(utils.get_filename_labels(label_data, base_fname), len(utils.labels))
-                else:
-                    lbls = utils.get_filename_labels(label_data, base_fname)
-                strs = utils.int_labels_to_text(lbls)
-                my_images.append(img)
-                my_label_indices.append(lbls)
-                my_label_strings.append(strs)
+            base_fname = utils.get_base_filename(filename)
+            b = base_fname + "_blue.png"
+            g = base_fname + "_green.png"
+            r = base_fname + "_red.png"
+            y = base_fname + "_yellow.png"
+            bimg = utils.open_image("/".join((self.files_dir, b)))
+            gimg = utils.open_image("/".join((self.files_dir, g)))
+            rimg = utils.open_image("/".join((self.files_dir, r)))
+            yimg = utils.open_image("/".join((self.files_dir, y)))
+
+            img = np.dstack((bimg, gimg, rimg, yimg))
+
+            if self.one_hot_labels:
+                lbls = self.one_hot(utils.get_filename_labels(label_data, base_fname), len(utils.labels))
+            else:
+                lbls = utils.get_filename_labels(label_data, base_fname)
+            strs = utils.int_labels_to_text(lbls)
+            my_images.append(img)
+            my_label_indices.append(lbls)
+            my_label_strings.append(strs)
 
         self.images = np.array(my_images)
         self.label_indices = np.array(my_label_indices, dtype=np.int32)
