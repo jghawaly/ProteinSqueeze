@@ -239,7 +239,7 @@ if __name__ == "__main__":
             myTP.testing_data = testing_data
             myTP.epochs = 25
             myTP.batch_size = 100
-            myTP.learning_rate = 0.0001
+            myTP.learning_rate = 0.001
             myTP.dropout_rate = 0.05
             myTP.input_depth = 3
             myTP.input_width = 32
@@ -260,7 +260,7 @@ if __name__ == "__main__":
             myTP.testing_data = testing_data
             myTP.epochs = 25
             myTP.batch_size = 32
-            myTP.learning_rate = 0.0001
+            myTP.learning_rate = 0.001
             myTP.dropout_rate = 0.05
             myTP.input_depth = 1
             myTP.input_width = 512
