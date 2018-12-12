@@ -49,7 +49,12 @@ class AtlasClassifier:
         self.images = tf.placeholder(tf.float32, shape=[self.tp.batch_size, self.tp.input_width, self.tp.input_height,
                                                         self.tp.input_depth])
 
-        conv1 = tf.layers.conv2d(inputs=self.images, filters=96, kernel_size=7, strides=(st, st),
+        if self.input_data_type == 'atlas':
+            self.inputs = tf.cast(self.images/255, tf.float32)
+        else:
+            self.inputs = self.images
+
+        conv1 = tf.layers.conv2d(inputs=self.inputs, filters=96, kernel_size=7, strides=(st, st),
                                       activation=tf.nn.relu,
                                       name="conv1")
 
