@@ -6,20 +6,10 @@ from atlas_loader import AtlasLoader
 
 
 class AtlasClassifier:
-    def __init__(self, sess: tf.Session, tp: TrainingParams):
+    def __init__(self, sess: tf.Session, tp: TrainingParams, input_data_type='atlas'):
+        self.input_data_type = input_data_type
         self.sess = sess
         self.tp = tp
-        self.initial_weight_std = 0.1
-        self.incep1_stride = 2
-        self.incep2_stride = 2
-        self.incep3_stride = 2
-        self.num_neurons_fc1 = 255
-        self.num_neurons_fc2 = 255
-        self.num_neurons_fc3 = 10  # len(utils.labels)
-        self.pre_incep1_filters = 32
-        self.pre_incep2_filters = 32
-        self.pre_incep3_filters = 32
-        self.pre_incep4_filters = 32
         self.build_model()
 
     def fire_module(self, inputs, c1_filters, c2_filters, c3_filters, name):
@@ -42,33 +32,47 @@ class AtlasClassifier:
         return tf.concat([c2, c3], 3, name=name)
 
     def build_model(self):
+        if self.input_data_type == 'atlas':
+            st = 2
+            ps = 15
+        elif self.input_data_type == 'cifar10':
+            st = 1
+            ps = 20
+        else:
+            raise ValueError("Bad input type, must be atlas or cifar10")
+
         self.dropout_rate = tf.placeholder(dtype=tf.float32)
         self.images = tf.placeholder(tf.float32, shape=[self.tp.batch_size, self.tp.input_width, self.tp.input_height,
                                                         self.tp.input_depth])
-        # self.images_resized = tf.image.resize_images(images=self.images, size=[224, 224])
-        self.conv1 = tf.layers.conv2d(inputs=self.images, filters=96, kernel_size=7, strides=(2, 2),
+
+        self.conv1 = tf.layers.conv2d(inputs=self.images, filters=96, kernel_size=7, strides=(st, st),
                                       activation=tf.nn.relu,
                                       name="conv1")
-        self.mpool1 = tf.layers.max_pooling2d(inputs=self.conv1, pool_size=3, strides=(2, 2), name='mpool1')
+        self.mpool1 = tf.layers.max_pooling2d(inputs=self.conv1, pool_size=3, strides=(st, st), name='mpool1')
         self.fire2 = self.fire_module(self.mpool1, 16, 64, 64, "fire2")
         self.fire3 = self.fire_module(self.fire2, 16, 64, 64, "fire3")
         self.fire4 = self.fire_module(self.fire3, 32, 128, 128, "fire4")
-        self.mpool4 = tf.layers.max_pooling2d(inputs=self.fire4, pool_size=3, strides=(2, 2), name="mpool4")
+        self.mpool4 = tf.layers.max_pooling2d(inputs=self.fire4, pool_size=3, strides=(st, st), name="mpool4")
         self.fire5 = self.fire_module(self.mpool4, 32, 128, 128, "fire5")
         self.fire6 = self.fire_module(self.fire5, 48, 192, 192, "fire6")
         self.fire7 = self.fire_module(self.fire6, 48, 192, 192, "fire7")
         self.fire8 = self.fire_module(self.fire7, 64, 256, 256, "fire8")
-        self.mpool8 = tf.layers.max_pooling2d(inputs=self.fire8, pool_size=3, strides=(2, 2), name='mpool8')
+        self.mpool8 = tf.layers.max_pooling2d(inputs=self.fire8, pool_size=3, strides=(st, st), name='mpool8')
         self.fire9 = self.fire_module(self.mpool8, 32, 128, 128, "fire9")
         self.dropout9 = tf.layers.dropout(inputs=self.fire9, rate=self.tp.dropout_rate, name='dropout9')
-        self.conv10 = tf.layers.conv2d(inputs=self.dropout9, filters=self.tp.num_classes, kernel_size=1, strides=(2, 2),
+        self.conv10 = tf.layers.conv2d(inputs=self.dropout9, filters=self.tp.num_classes, kernel_size=1, strides=(1, 1),
                                        activation=tf.nn.relu,
                                        name='conv10')
-        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=15, strides=(2, 2), name='avgpool10')
+        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=ps, strides=(st, st), name='avgpool10')
 
-        self.avgpool10 = tf.nn.sigmoid(self.avgpool10, name='out')
+        if self.input_data_type == 'atlas':
+            self.activated = tf.nn.sigmoid(self.avgpool10, name='outs')
+        elif self.input_data_type == 'cifar10':
+            self.activated = tf.nn.softmax(self.avgpool10, name='outs')
+        else:
+            raise ValueError("Bad input type, must be atlas or cifar10")
 
-        self.logits = tf.layers.flatten(inputs=self.avgpool10, name='logits')
+        self.logits = tf.layers.flatten(inputs=self.activated, name='logits')
 
         # print out the network architecture
         print(self.conv1.shape)
@@ -85,36 +89,38 @@ class AtlasClassifier:
         print(self.fire9.shape)
         print(self.conv10.shape)
         print(self.avgpool10.shape)
+        print(self.activated.shape)
         print(self.logits.shape)
 
     def train(self):
-        # UNCOMMENT FOR SINGLE LABEL CLASSIFICAITON, SUCH AS CIFAR10
-        # # contains the desired outputs
-        # desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
-        # # the predicted labels
-        # logits = tf.reshape(tf.cast(tf.argmax(self.logits, 1), tf.int32), [-1, 1])
-        # # the actual labels
-        # labels = tf.reshape(tf.cast(tf.argmax(desired_outputs, 1), tf.int32), [-1, 1])
-        # # loss function for single label
-        # loss_function = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self.logits))
-        # # Adam Optimizer
-        # optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
-        # # accuracy measure
-        # accuracy = tf.reduce_mean(tf.cast(tf.equal(logits, labels), dtype=tf.float32))
+        if self.input_data_type == 'cifar10':
+            # contains the desired outputs
+            desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
+            # the predicted labels
+            logits = tf.reshape(tf.cast(tf.argmax(self.logits, 1), tf.int32), [-1, 1])
+            # the actual labels
+            labels = tf.reshape(tf.cast(tf.argmax(desired_outputs, 1), tf.int32), [-1, 1])
+            # loss function for single label
+            loss_function = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self.logits))
+            # Adam Optimizer
+            optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
+            # accuracy measure
+            accuracy = tf.reduce_mean(tf.cast(tf.equal(logits, labels), dtype=tf.float32))
+        elif self.input_data_type == 'atlas':
+            # contains the desired outputs
+            desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
+            # loss function for multi label
+            loss_function = tf.reduce_mean(tf.reduce_sum(
+                tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits)))
+            # Adam Optimizer
+            optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
+            # how correct network is
+            correctness = tf.equal(tf.round(tf.nn.sigmoid(self.logits)), tf.round(desired_outputs))
+            # accuracy measure
+            accuracy = tf.reduce_mean(tf.cast(correctness, tf.float32))
+        else:
+            raise ValueError("Bad input type, must be atlas or cifar10")
 
-        # MULTI LABEL
-        # contains the desired outputs
-        desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
-        # loss function for multi label
-        loss_function = tf.reduce_mean(tf.reduce_sum(
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits)))
-        # Adam Optimizer
-        optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
-        # accuracy measure
-        # accuracy = tf.reduce_mean(tf.cast(tf.equal(self.logits, desired_outputs), dtype=tf.float32))
-        # accuracy = tf.reduce_mean(tf.cast(tf.equal(tf.round(self.logits)), tf.round(desired_outputs), tf.float32))
-        correction = tf.equal(tf.round(self.logits), tf.round(desired_outputs))
-        accuracy = tf.reduce_mean(tf.cast(correction, tf.float32))
         # this will store losses during training
         losses = []
 
@@ -182,12 +188,13 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = False
+    train_cifar10 = True
 
     if train_cifar10:
         with tf.Session() as sess:
             path = "C:/Users/james/PycharmProjects/machine_learning/src/deep_learning/vgg16_data/cifar-10-batches-py/"
-            training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'], path)
+            training_data = CIFAR10(['data_batch_1', 'data_batch_2', 'data_batch_3', 'data_batch_4', 'data_batch_5'],
+                                    path)
             testing_data = CIFAR10(['test_batch'], path)
 
             myTP = TrainingParams()
@@ -202,13 +209,11 @@ if __name__ == "__main__":
             myTP.input_height = 32
             myTP.num_classes = 10
 
-            myModel = AtlasClassifier(sess, myTP)
+            myModel = AtlasClassifier(sess, myTP, input_data_type='cifar10')
             myModel.train()
     else:
         with tf.Session() as sess:
-            # path = "D:/Data/all/train"
             path = "../data/train"
-            # training_data = AtlasLoader(path, keys_file="D:/Data/all/train.csv")
             training_data = AtlasLoader(path, keys_file="../data/train.csv")
             testing_data = training_data
 
@@ -224,7 +229,7 @@ if __name__ == "__main__":
             myTP.input_height = 512
             myTP.num_classes = len(labels)
 
-            myModel = AtlasClassifier(sess, myTP)
+            myModel = AtlasClassifier(sess, myTP, input_data_type='atlas')
             losses = myModel.train()
-            myModel.save("myNetwork.ckpt")
+            myModel.save("/networks/myCifarModel.ckpt")
             np.save("losses.npy", losses)
