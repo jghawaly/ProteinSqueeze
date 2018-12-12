@@ -102,14 +102,15 @@ class AtlasLoader:
         self.parse()
 
     def build_image(self, path):
+        # print(path)
         b = path + "_blue.png"
         g = path + "_green.png"
         r = path + "_red.png"
         y = path + "_yellow.png"
-        bimg = utils.open_image("/".join((self.files_dir, b)))
-        gimg = utils.open_image("/".join((self.files_dir, g)))
-        rimg = utils.open_image("/".join((self.files_dir, r)))
-        yimg = utils.open_image("/".join((self.files_dir, y)))
+        bimg = utils.open_image(b)
+        gimg = utils.open_image(g)
+        rimg = utils.open_image(r)
+        yimg = utils.open_image(y)
 
         return np.dstack((bimg, gimg, rimg, yimg))
 
@@ -163,7 +164,7 @@ class AtlasLoader:
 
     def get_next_batch(self):
         # next_img_batch = np.reshape(self.images[self.shuffled_indices[self.batch_iteration]], [self.batch_size, 512, 512, 1])
-        next_img_batch = np.reshape(self.image_batch_from_files(self.image_filenames[self.shuffled_indices[self.batch_iteration]]), [self.batch_size, 512, 512, 1])
+        next_img_batch = np.reshape(self.image_batch_from_files(self.image_filenames[self.shuffled_indices[self.batch_iteration]]), [self.batch_size, 512, 512, 4])
         next_label_batch = self.label_indices[self.shuffled_indices[self.batch_iteration]]
         next_string_batch = self.label_strings[self.shuffled_indices[self.batch_iteration]]
         self.batch_iteration += 1
