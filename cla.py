@@ -142,6 +142,7 @@ class AtlasClassifier:
 
         # Initialize all variables
         self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.local_variables_initializer())
 
         # Loop over number of epochs
         for epoch in range(self.tp.epochs):
