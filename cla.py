@@ -128,7 +128,8 @@ class AtlasClassifier:
             # how correct network is
             correctness = tf.equal(tf.round(self.logits), tf.round(desired_outputs))
             # accuracy measure
-            accuracy = tf.reduce_mean(tf.cast(correctness, tf.float32))
+            # accuracy = tf.reduce_mean(tf.cast(correctness, tf.float32))
+            accuracy = tf.contrib.metrics.f1_score(labels=desired_outputs, predictions=tf.round(self.logits))
         else:
             raise ValueError("Bad input type, must be atlas or cifar10")
 
@@ -184,7 +185,10 @@ class AtlasClassifier:
 
                 x += 1
                 accs.append(acc)
-            print("Accuracy: %g" % (100.0 * np.average(np.array(accs))))
+            if self.input_data_type == 'cifar10':
+                print("Accuracy: %g" % (100.0 * np.average(np.array(accs))))
+            else:
+                print("Accuracy: %g" % (np.average(np.array(accs))))
             losses.append(loss)
         return losses
 
@@ -225,7 +229,7 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = True
+    train_cifar10 = False
 
     if train_cifar10:
         with tf.Session() as sess:
