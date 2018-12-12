@@ -67,11 +67,6 @@ class AtlasLoader:
         return outputs
 
     def get_next_batch(self):
-        # next_img_batch = self.image_batch[self.batch_iteration]
-        # next_label_batch = self.label_batch[self.batch_iteration]
-        # next_string_batch = self.string_batch[self.batch_iteration]
-        print(len(self.shuffled_indices))
-        exit()
         next_img_batch = np.reshape(self.images[self.shuffled_indices[self.batch_iteration]], [self.batch_size, 512, 512, 1])
         next_label_batch = self.label_indices[self.shuffled_indices[self.batch_iteration]]
         next_string_batch = self.label_strings[self.shuffled_indices[self.batch_iteration]]

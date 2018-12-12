@@ -46,25 +46,25 @@ class AtlasClassifier:
         self.images = tf.placeholder(tf.float32, shape=[self.tp.batch_size, self.tp.input_width, self.tp.input_height,
                                                         self.tp.input_depth])
         # self.images_resized = tf.image.resize_images(images=self.images, size=[224, 224])
-        self.conv1 = tf.layers.conv2d(inputs=self.images, filters=96, kernel_size=7, strides=(2, 2),
+        self.conv1 = tf.layers.conv2d(inputs=self.images, filters=96, kernel_size=7, strides=(1, 1),
                                       activation=tf.nn.relu,
                                       name="conv1")
-        self.mpool1 = tf.layers.max_pooling2d(inputs=self.conv1, pool_size=3, strides=(2, 2), name='mpool1')
+        self.mpool1 = tf.layers.max_pooling2d(inputs=self.conv1, pool_size=3, strides=(1, 1), name='mpool1')
         self.fire2 = self.fire_module(self.mpool1, 16, 64, 64, "fire2")
         self.fire3 = self.fire_module(self.fire2, 16, 64, 64, "fire3")
         self.fire4 = self.fire_module(self.fire3, 32, 128, 128, "fire4")
-        self.mpool4 = tf.layers.max_pooling2d(inputs=self.fire4, pool_size=3, strides=(2, 2), name="mpool4")
+        self.mpool4 = tf.layers.max_pooling2d(inputs=self.fire4, pool_size=3, strides=(1, 1), name="mpool4")
         self.fire5 = self.fire_module(self.mpool4, 32, 128, 128, "fire5")
         self.fire6 = self.fire_module(self.fire5, 48, 192, 192, "fire6")
         self.fire7 = self.fire_module(self.fire6, 48, 192, 192, "fire7")
         self.fire8 = self.fire_module(self.fire7, 64, 256, 256, "fire8")
-        self.mpool8 = tf.layers.max_pooling2d(inputs=self.fire8, pool_size=3, strides=(2, 2), name='mpool8')
+        self.mpool8 = tf.layers.max_pooling2d(inputs=self.fire8, pool_size=3, strides=(1, 1), name='mpool8')
         self.fire9 = self.fire_module(self.mpool8, 32, 128, 128, "fire9")
         self.dropout9 = tf.layers.dropout(inputs=self.fire9, rate=self.tp.dropout_rate, name='dropout9')
-        self.conv10 = tf.layers.conv2d(inputs=self.dropout9, filters=self.tp.num_classes, kernel_size=1, strides=(2, 2),
+        self.conv10 = tf.layers.conv2d(inputs=self.dropout9, filters=self.tp.num_classes, kernel_size=1, strides=(1, 1),
                                        activation=tf.nn.relu,
                                        name='conv10')
-        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=15, strides=(2, 2), name='avgpool10')
+        self.avgpool10 = tf.layers.average_pooling2d(inputs=self.conv10, pool_size=20, strides=(1, 1), name='avgpool10')
 
         self.avgpool10 = tf.nn.sigmoid(self.avgpool10, name='out')
 
@@ -89,29 +89,29 @@ class AtlasClassifier:
 
     def train(self):
         # UNCOMMENT FOR SINGLE LABEL CLASSIFICAITON, SUCH AS CIFAR10
-        # # contains the desired outputs
-        # desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
-        # # the predicted labels
-        # logits = tf.reshape(tf.cast(tf.argmax(self.logits, 1), tf.int32), [-1, 1])
-        # # the actual labels
-        # labels = tf.reshape(tf.cast(tf.argmax(desired_outputs, 1), tf.int32), [-1, 1])
-        # # loss function for single label
-        # loss_function = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self.logits))
-        # # Adam Optimizer
-        # optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
-        # # accuracy measure
-        # accuracy = tf.reduce_mean(tf.cast(tf.equal(logits, labels), dtype=tf.float32))
-
-        # MULTI LABEL
         # contains the desired outputs
         desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
-        # loss function for multi label
-        loss_function = tf.reduce_mean(tf.reduce_sum(
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits)))
+        # the predicted labels
+        logits = tf.reshape(tf.cast(tf.argmax(self.logits, 1), tf.int32), [-1, 1])
+        # the actual labels
+        labels = tf.reshape(tf.cast(tf.argmax(desired_outputs, 1), tf.int32), [-1, 1])
+        # loss function for single label
+        loss_function = tf.reduce_mean(tf.losses.sparse_softmax_cross_entropy(labels=labels, logits=self.logits))
         # Adam Optimizer
         optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
         # accuracy measure
-        accuracy = tf.reduce_mean(tf.cast(tf.equal(self.logits, desired_outputs), dtype=tf.float32))
+        accuracy = tf.reduce_mean(tf.cast(tf.equal(logits, labels), dtype=tf.float32))
+
+        # MULTI LABEL
+        # # contains the desired outputs
+        # desired_outputs = tf.placeholder(dtype=tf.float32, shape=self.logits.shape, name='desired_outputs')
+        # # loss function for multi label
+        # loss_function = tf.reduce_mean(tf.reduce_sum(
+        #     tf.nn.sigmoid_cross_entropy_with_logits(labels=desired_outputs, logits=self.logits)))
+        # # Adam Optimizer
+        # optimizer = tf.train.AdamOptimizer(self.tp.learning_rate).minimize(loss_function)
+        # # accuracy measure
+        # accuracy = tf.reduce_mean(tf.cast(tf.equal(self.logits, desired_outputs), dtype=tf.float32))
 
         # this will store losses during training
         losses = []
@@ -160,6 +160,7 @@ class AtlasClassifier:
                 accs.append(acc)
             print("Accuracy: %g" % (100.0 * np.average(np.array(accs))))
             losses.append(loss)
+        return losses
 
     def save(self, path):
         # this is so that we can save the network
@@ -179,7 +180,7 @@ class AtlasClassifier:
 
 
 if __name__ == "__main__":
-    train_cifar10 = False
+    train_cifar10 = True
 
     if train_cifar10:
         with tf.Session() as sess:
@@ -222,4 +223,6 @@ if __name__ == "__main__":
             myTP.num_classes = len(labels)
 
             myModel = AtlasClassifier(sess, myTP)
-            myModel.train()
+            losses = myModel.train()
+            myModel.save("/networks/myCifarModel.ckpt")
+            np.save("losses.npy", losses)
